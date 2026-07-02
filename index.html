@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recibos de Vale Transporte</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --paper:#FAF8F3;
+    --paper-line:#E4DECF;
+    --ink:#22282E;
+    --ink-soft:#5B6470;
+    --stamp:#2F6B66;
+    --stamp-dark:#214B47;
+    --amber:#C97D3D;
+    --danger:#B3432B;
+    --card:#FFFFFF;
+    --shadow:0 1px 2px rgba(34,40,46,.06), 0 4px 14px rgba(34,40,46,.06);
+    --radius:10px;
+    --serif:'Source Serif 4','Iowan Old Style', Georgia, serif;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    --mono:'IBM Plex Mono', ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var(--sans);}
+  body{
+    background-image:
+      linear-gradient(var(--paper-line) 1px, transparent 1px);
+    background-size: 100% 2.1em;
+    background-attachment:local;
+    min-height:100vh;
+  }
+  #app{max-width:1080px;margin:0 auto;padding:28px 20px 80px;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:22px;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .seal{
+    width:46px;height:46px;border-radius:50%;
+    background:var(--stamp);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-weight:700;font-size:18px;
+    box-shadow:var(--shadow);
+    border:2px dashed rgba(255,255,255,.55);
+  }
+  .brand h1{font-family:var(--serif);font-size:21px;margin:0;font-weight:700;letter-spacing:.2px;}
+  .brand p{margin:0;font-size:12.5px;color:var(--ink-soft);}
+
+  nav.tabs{display:flex;gap:6px;background:var(--card);padding:5px;border-radius:999px;box-shadow:var(--shadow);}
+  nav.tabs button{
+    border:none;background:transparent;padding:9px 16px;border-radius:999px;
+    font-family:var(--sans);font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;
+    transition:.15s;
+  }
+  nav.tabs button.active{background:var(--stamp);color:#fff;}
+  nav.tabs button:not(.active):hover{background:var(--paper);}
+
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;margin-bottom:18px;}
+  .card h2{font-family:var(--serif);font-size:18px;margin:0 0 4px;}
+  .card .sub{color:var(--ink-soft);font-size:13px;margin:0 0 16px;}
+
+  .row{display:flex;gap:12px;flex-wrap:wrap;}
+  .field{flex:1;min-width:160px;display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+  .field label{font-size:12px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
+  .field input, .field select{
+    border:1px solid var(--paper-line);border-radius:7px;padding:9px 11px;font-size:14px;font-family:var(--sans);
+    background:#fff;color:var(--ink);
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--stamp);outline-offset:1px;}
+
+  button.btn{
+    border:none;border-radius:7px;padding:10px 18px;font-size:13.5px;font-weight:600;cursor:pointer;
+    font-family:var(--sans);transition:.15s;display:inline-flex;align-items:center;gap:7px;
+  }
+  .btn-primary{background:var(--stamp);color:#fff;}
+  .btn-primary:hover{background:var(--stamp-dark);}
+  .btn-ghost{background:transparent;color:var(--stamp);border:1px solid var(--stamp);}
+  .btn-ghost:hover{background:rgba(47,107,102,.08);}
+  .btn-danger{background:transparent;color:var(--danger);border:1px solid transparent;}
+  .btn-danger:hover{background:rgba(179,67,43,.08);}
+  .btn-amber{background:var(--amber);color:#fff;}
+  .btn-amber:hover{filter:brightness(.93);}
+  button.btn:disabled{opacity:.45;cursor:not-allowed;}
+
+  .company-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+  .company-card{
+    border:1.5px solid var(--paper-line);border-radius:9px;padding:14px;cursor:pointer;position:relative;background:#fff;
+    transition:.15s;
+  }
+  .company-card:hover{border-color:var(--stamp);}
+  .company-card.active{border-color:var(--stamp);background:rgba(47,107,102,.06);box-shadow:0 0 0 1px var(--stamp) inset;}
+  .company-card .name{font-weight:700;font-size:14.5px;margin-bottom:2px;}
+  .company-card .cnpj{font-size:12px;color:var(--ink-soft);font-family:var(--mono);}
+  .company-card .tag{
+    position:absolute;top:10px;right:10px;font-size:10px;background:var(--stamp);color:#fff;
+    padding:2px 7px;border-radius:999px;font-weight:700;letter-spacing:.03em;
+  }
+  .company-card .mini-actions{display:flex;gap:8px;margin-top:10px;}
+  .company-card .mini-actions span{font-size:11.5px;color:var(--ink-soft);cursor:pointer;font-weight:600;}
+  .company-card .mini-actions span:hover{color:var(--stamp);}
+
+  table.tbl{width:100%;border-collapse:collapse;font-size:13.5px;}
+  table.tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);
+    border-bottom:1.5px solid var(--ink);padding:8px 8px;}
+  table.tbl td{padding:8px 8px;border-bottom:1px solid var(--paper-line);}
+  table.tbl tr:hover td{background:rgba(47,107,102,.04);}
+  .editable{border:1px solid transparent;background:transparent;width:100%;font-size:13.5px;font-family:var(--sans);
+    padding:4px 6px;border-radius:5px;color:var(--ink);}
+  .editable:hover{border-color:var(--paper-line);}
+  .editable:focus{border-color:var(--stamp);outline:none;background:#fff;}
+
+  .empty{text-align:center;padding:40px 10px;color:var(--ink-soft);}
+  .empty .big{font-size:34px;margin-bottom:6px;}
+
+  .dropzone{
+    border:2px dashed var(--paper-line);border-radius:10px;padding:34px 20px;text-align:center;cursor:pointer;
+    transition:.15s;background:repeating-linear-gradient(135deg, transparent, transparent 10px, rgba(47,107,102,.025) 10px, rgba(47,107,102,.025) 20px);
+  }
+  .dropzone:hover, .dropzone.drag{border-color:var(--stamp);background:rgba(47,107,102,.05);}
+  .dropzone .big{font-size:30px;}
+  .dropzone p{margin:6px 0 0;color:var(--ink-soft);font-size:13px;}
+  .dropzone strong{color:var(--stamp);}
+
+  .pill{display:inline-flex;align-items:center;gap:6px;background:rgba(201,125,61,.13);color:var(--amber);
+    font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;}
+  .pill.ok{background:rgba(47,107,102,.13);color:var(--stamp);}
+  .pill.warn{background:rgba(179,67,43,.12);color:var(--danger);}
+
+  .stepbar{display:flex;gap:8px;margin-bottom:18px;}
+  .step{flex:1;height:4px;background:var(--paper-line);border-radius:3px;}
+  .step.done{background:var(--stamp);}
+
+  .match-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--paper-line);flex-wrap:wrap;}
+  .match-row .nome{font-weight:700;min-width:200px;flex:1;}
+  .match-row small{color:var(--ink-soft);}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:11px 20px;border-radius:8px;font-size:13.5px;
+    box-shadow:var(--shadow);z-index:999;opacity:0;pointer-events:none;transition:.25s;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+
+  .banner{border-radius:9px;padding:13px 16px;margin-bottom:18px;font-size:13.5px;font-weight:600;display:none;line-height:1.5;}
+  .banner.show{display:block;}
+  .banner.danger{background:#FCEAE6;color:var(--danger);border:1.5px solid var(--danger);}
+  .banner.warn{background:#FCF3E6;color:#8A5A1E;border:1.5px solid var(--amber);}
+
+  /* ---------- RECEIPT PREVIEW / PRINT (réplica fiel do modelo) ---------- */
+  #receiptsArea{display:none;}
+  #receiptsArea.pdf-capture{display:block;position:fixed;left:-10000px;top:0;z-index:-1;}
+  .sheet{
+    background:#fff;width:210mm;min-height:297mm;margin:0 auto 22px;padding:14mm 16mm;
+    box-shadow:var(--shadow);position:relative;display:flex;flex-direction:column;
+  }
+  .receipts-pair{flex:1;display:flex;flex-direction:column;justify-content:center;}
+  .receipt-box{
+    border:2px solid #000;font-family:Arial,Helvetica,sans-serif;color:#000;font-size:14.5px;
+  }
+  .r-title{padding:13px 12px;font-size:26px;font-weight:800;text-align:center;border-bottom:2px solid #000;letter-spacing:.4px;}
+  table.r-info{width:100%;border-collapse:collapse;}
+  table.r-info td{border:1px solid #000;padding:9px 14px;font-size:14.5px;vertical-align:top;}
+  table.r-info td.lbl{width:62%;}
+  table.r-info b{font-weight:700;}
+  table.r-info tr:first-child td{border-top:none;}
+  table.r-info tr td:first-child{border-left:none;}
+  table.r-info tr td:last-child{border-right:none;}
+  table.r-items{width:100%;border-collapse:collapse;border-top:2px solid #000;}
+  table.r-items th{border:1px solid #000;border-top:none;padding:7px 8px;font-size:12.5px;font-weight:700;text-align:center;background:#fff;}
+  table.r-items th:first-child, table.r-items td:first-child{border-left:none;}
+  table.r-items th:last-child, table.r-items td:last-child{border-right:none;}
+  table.r-items td{border:1px solid #000;padding:7px 9px;font-size:14px;height:26px;}
+  table.r-items td.c-cod{text-align:right;width:8%;}
+  table.r-items td.c-transp{width:30%;}
+  table.r-items td.c-valor{width:11%;}
+  table.r-items td.c-qtd{width:34%;}
+  table.r-items td.c-total{width:17%;text-align:right;}
+  .r-total{display:flex;align-items:flex-end;padding:12px 14px;font-weight:700;border-top:2px solid #000;font-size:14.5px;}
+  .r-total .dots{flex:1;border-bottom:1px dotted #000;margin:0 4px 3px;min-width:20px;}
+  .r-decl{padding:14px 14px 18px;border-top:2px solid #000;}
+  .r-decl p{margin:0 0 20px;font-weight:700;font-size:14px;text-align:left;line-height:1.5;}
+  .r-decl .r-dateline{font-size:14px;font-weight:400;margin-bottom:36px;}
+  .r-decl .r-sign{width:46%;margin-left:auto;text-align:center;}
+  .r-decl .r-sign .ln{border-top:1px solid #000;margin-bottom:5px;}
+  .r-decl .r-sign .nm{font-size:14px;}
+  .r-cnpj-row{padding:5px 14px;font-size:12px;color:#000;border-top:1px solid #000;}
+  .page-footer{margin-top:auto;display:flex;justify-content:space-between;font-size:10px;color:#000;padding-top:8px;}
+
+  .cutline{display:flex;align-items:center;gap:10px;color:#000;margin:9mm 0;}
+  .cutline .dash{flex:1;border-top:1.5px dashed #444;}
+  .cutline .scissors{font-size:19px;line-height:1;transform:rotate(90deg);}
+  .cutline .lbl{font-size:10.5px;letter-spacing:.05em;color:#444;white-space:nowrap;text-transform:uppercase;}
+
+  @media print{
+    body{background:#fff;}
+    body::before{display:none;}
+    #app > *:not(#receiptsArea){display:none !important;}
+    #receiptsArea{display:block !important;}
+    .sheet{box-shadow:none;margin:0;padding:6mm 8mm !important;page-break-after:always;width:100% !important;min-height:auto;}
+    .sheet:last-child{page-break-after:auto;}
+    @page{size:A4;margin:8mm;}
+  }
+  @media (max-width:680px){
+    .sheet{width:100%;padding:6mm;}
+    nav.tabs{overflow-x:auto;}
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="seal">VT</div>
+      <div>
+        <h1>Recibos de Vale Transporte</h1>
+        <p>Cadastros + importação de planilha + geração em lote</p>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="empresas">Empresas</button>
+      <button data-tab="funcionarios">Funcionários</button>
+      <button data-tab="importar">Importar &amp; Gerar</button>
+      <button data-tab="config">Configurações</button>
+    </nav>
+  </div>
+  <div id="storageBanner"></div>
+
+  <div id="tab-empresas"></div>
+  <div id="tab-funcionarios"></div>
+  <div id="tab-importar"></div>
+  <div id="tab-config"></div>
+
+  <div id="receiptsArea"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+/* ===================== FIREBASE ===================== */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
+  getDocs, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { firebaseConfig } from './firebase-config.js';
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+function setBanner(type, html){
+  const b = document.getElementById('storageBanner');
+  if(!b) return;
+  if(!html){ b.className = 'banner'; b.innerHTML=''; return; }
+  b.className = 'banner show ' + type;
+  b.innerHTML = html;
+}
+
+/* ===================== STATE ===================== */
+let state = {
+  tab: 'empresas',
+  companies: [],
+  activeCompanyId: null,
+  employees: {}, // companyId -> array
+  settings: { cidade: 'São Paulo', rodapeEsq: '', rodapeDir: '', mostrarCnpj: false },
+  importData: null, // { companyId, sheetName, mes, ano, rows: [{nome, valorDia, dias, totalDias, valorMes, cargoSheet, matchedEmployeeId}] }
+  workbook: null,
+  generated: [] // final receipt objects ready to render
+};
+
+function fmtBRL(n){ n = Number(n)||0; return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function normName(s){
+  return (s||'').toString().trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ===================== SINCRONIZAÇÃO EM TEMPO REAL ===================== */
+let unsubCompanies = null, unsubSettings = null, unsubEmployees = null, employeesListenedFor = null;
+
+function startApp(){
+  unsubCompanies = onSnapshot(collection(db,'companies'), (snap)=>{
+    state.companies = snap.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+    if(!state.activeCompanyId && state.companies.length) state.activeCompanyId = state.companies[0].id;
+    if(state.activeCompanyId && !state.companies.find(c=>c.id===state.activeCompanyId)){
+      state.activeCompanyId = state.companies[0]?.id || null;
+    }
+    if(state.activeCompanyId) listenEmployees(state.activeCompanyId);
+    setBanner(null);
+    renderAll();
+  }, (err)=>{
+    console.error(err);
+    setBanner('warn', '⚠️ Não consegui sincronizar com o banco agora (conexão ou permissão). Os dados na tela são os últimos recebidos com sucesso.');
+  });
+  unsubSettings = onSnapshot(doc(db,'settings','global'), (snap)=>{
+    if(snap.exists()) state.settings = Object.assign({}, state.settings, snap.data());
+    renderAll();
+  }, (err)=>console.error(err));
+}
+function listenEmployees(companyId){
+  if(employeesListenedFor===companyId && unsubEmployees) return;
+  if(unsubEmployees) unsubEmployees();
+  employeesListenedFor = companyId;
+  unsubEmployees = onSnapshot(collection(db,'companies',companyId,'employees'), (snap)=>{
+    state.employees[companyId] = snap.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+    renderAll();
+  }, (err)=>{
+    console.error(err);
+    setBanner('warn', '⚠️ Não consegui sincronizar os funcionários desta empresa agora (conexão ou permissão).');
+  });
+}
+function stopListeners(){
+  if(unsubCompanies){ unsubCompanies(); unsubCompanies=null; }
+  if(unsubSettings){ unsubSettings(); unsubSettings=null; }
+  if(unsubEmployees){ unsubEmployees(); unsubEmployees=null; }
+  employeesListenedFor = null;
+  state.companies = []; state.employees = {}; state.activeCompanyId = null;
+}
+
+/* ===================== TABS ===================== */
+document.getElementById('tabs').addEventListener('click', e=>{
+  const b = e.target.closest('button[data-tab]');
+  if(!b) return;
+  state.tab = b.dataset.tab;
+  if((state.tab==='funcionarios' || state.tab==='importar') && state.activeCompanyId){
+    listenEmployees(state.activeCompanyId);
+  }
+  renderAll();
+});
+
+function renderAll(){
+  document.querySelectorAll('#tabs button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tab===state.tab);
+  });
+  ['empresas','funcionarios','importar','config'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display = (state.tab===t) ? 'block':'none';
+  });
+  if(state.tab==='empresas') renderEmpresas();
+  if(state.tab==='funcionarios') renderFuncionarios();
+  if(state.tab==='importar') renderImportar();
+  if(state.tab==='config') renderConfig();
+}
+
+/* ===================== EMPRESAS ===================== */
+function renderEmpresas(){
+  const el = document.getElementById('tab-empresas');
+  el.innerHTML = `
+    <div class="card">
+      <h2>Empresas cadastradas</h2>
+      <p class="sub">Selecione a empresa ativa (usada na importação e nos recibos) ou cadastre uma nova.</p>
+      <div class="company-grid" id="companyGrid"></div>
+    </div>
+    <div class="card">
+      <h2>Nova empresa</h2>
+      <div class="row">
+        <div class="field"><label>Nome da empresa</label><input id="newCompName" placeholder="Ex: JUST BURGER HAMBURGUERIA LTDA"></div>
+        <div class="field"><label>CNPJ</label><input id="newCompCnpj" placeholder="00.000.000/0000-00"></div>
+      </div>
+      <button class="btn btn-primary" id="addCompanyBtn">+ Adicionar empresa</button>
+    </div>
+  `;
+  const grid = document.getElementById('companyGrid');
+  if(!state.companies.length){
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="big">🏢</div>Nenhuma empresa cadastrada ainda.</div>`;
+  } else {
+    grid.innerHTML = state.companies.map(c=>`
+      <div class="company-card ${c.id===state.activeCompanyId?'active':''}" data-id="${c.id}">
+        ${c.id===state.activeCompanyId?'<span class="tag">ATIVA</span>':''}
+        <div class="name">${escapeHtml(c.nome)}</div>
+        <div class="cnpj">${escapeHtml(c.cnpj||'CNPJ não informado')}</div>
+        <div class="mini-actions">
+          <span data-act="edit" data-id="${c.id}">editar</span>
+          <span data-act="del" data-id="${c.id}">excluir</span>
+        </div>
+      </div>
+    `).join('');
+  }
+  grid.querySelectorAll('.company-card').forEach(card=>{
+    card.addEventListener('click', (e)=>{
+      if(e.target.closest('[data-act]')) return;
+      state.activeCompanyId = card.dataset.id;
+      listenEmployees(state.activeCompanyId);
+      renderAll();
+      showToast('Empresa ativa: ' + (state.companies.find(c=>c.id===card.dataset.id)||{}).nome);
+    });
+  });
+  grid.querySelectorAll('[data-act="del"]').forEach(s=>s.addEventListener('click', async (e)=>{
+    e.stopPropagation();
+    const id = s.dataset.id;
+    const comp = state.companies.find(c=>c.id===id);
+    if(!confirm(`Excluir a empresa "${comp.nome}"? Os funcionários cadastrados dela também serão removidos.`)) return;
+    try{
+      const empsSnap = await getDocs(collection(db,'companies',id,'employees'));
+      await Promise.all(empsSnap.docs.map(d=>deleteDoc(d.ref)));
+      await deleteDoc(doc(db,'companies',id));
+      if(state.activeCompanyId===id) state.activeCompanyId = null;
+      showToast('Empresa excluída.');
+    }catch(err){
+      console.error(err);
+      setBanner('danger','⚠️ Não consegui excluir essa empresa agora. Tente novamente.');
+    }
+  }));
+  grid.querySelectorAll('[data-act="edit"]').forEach(s=>s.addEventListener('click', async (e)=>{
+    e.stopPropagation();
+    const id = s.dataset.id;
+    const comp = state.companies.find(c=>c.id===id);
+    const novoNome = prompt('Nome da empresa:', comp.nome);
+    if(novoNome===null) return;
+    const novoCnpj = prompt('CNPJ:', comp.cnpj||'');
+    try{
+      await updateDoc(doc(db,'companies',id), { nome: novoNome.trim()||comp.nome, cnpj: (novoCnpj||'').trim() });
+    }catch(err){
+      console.error(err);
+      setBanner('danger','⚠️ Não consegui salvar essa edição agora. Tente novamente.');
+    }
+  }));
+  document.getElementById('addCompanyBtn').addEventListener('click', async ()=>{
+    const nome = document.getElementById('newCompName').value.trim();
+    const cnpj = document.getElementById('newCompCnpj').value.trim();
+    if(!nome){ showToast('Digite o nome da empresa.'); return; }
+    try{
+      const ref = await addDoc(collection(db,'companies'), { nome, cnpj });
+      state.activeCompanyId = ref.id;
+      showToast('Empresa adicionada.');
+    }catch(err){
+      console.error(err);
+      setBanner('danger','⚠️ Não consegui salvar essa empresa agora. Tente novamente.');
+    }
+  });
+}
+
+/* ===================== FUNCIONARIOS ===================== */
+function renderFuncionarios(){
+  const el = document.getElementById('tab-funcionarios');
+  if(!state.activeCompanyId){
+    el.innerHTML = `<div class="card"><div class="empty"><div class="big">🏢</div>Cadastre e selecione uma empresa primeiro, na aba <b>Empresas</b>.</div></div>`;
+    return;
+  }
+  const comp = state.companies.find(c=>c.id===state.activeCompanyId);
+  const emps = state.employees[state.activeCompanyId] || [];
+  el.innerHTML = `
+    <div class="card">
+      <h2>Funcionários — ${escapeHtml(comp.nome)}</h2>
+      <p class="sub">CPF, cargo e código do vale-transporte ficam salvos aqui e são usados automaticamente ao gerar os recibos.</p>
+      <div style="overflow-x:auto">
+      <table class="tbl" id="empTable">
+        <thead><tr>
+          <th style="min-width:180px">Nome</th><th>Cargo</th><th>CPF</th><th>Dpto.</th><th>Cód. VT</th><th>Descrição</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${emps.map(f=>empRow(f)).join('') || `<tr><td colspan="7" class="empty">Nenhum funcionário cadastrado ainda. Adicione abaixo ou importe a planilha.</td></tr>`}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Adicionar funcionário</h2>
+      <div class="row">
+        <div class="field"><label>Nome</label><input id="fNome" placeholder="Nome completo"></div>
+        <div class="field"><label>Cargo</label><input id="fCargo" placeholder="Ex: Atendente"></div>
+        <div class="field"><label>CPF</label><input id="fCpf" placeholder="000.000.000-00"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Departamento</label><input id="fDpto" placeholder="Opcional"></div>
+        <div class="field"><label>Código transporte</label><input id="fCod" placeholder="Ex: 803" value="803"></div>
+        <div class="field"><label>Descrição</label><input id="fDesc" placeholder="Ex: TRANSPORTE" value="TRANSPORTE"></div>
+      </div>
+      <button class="btn btn-primary" id="addEmpBtn">+ Adicionar funcionário</button>
+    </div>
+  `;
+  function empRow(f){
+    return `<tr data-id="${f.id}">
+      <td><input class="editable" data-field="nome" value="${escapeHtml(f.nome)}"></td>
+      <td><input class="editable" data-field="cargo" value="${escapeHtml(f.cargo||'')}"></td>
+      <td><input class="editable" data-field="cpf" value="${escapeHtml(f.cpf||'')}"></td>
+      <td><input class="editable" data-field="dpto" value="${escapeHtml(f.dpto||'')}"></td>
+      <td style="max-width:70px"><input class="editable" data-field="codTransporte" value="${escapeHtml(f.codTransporte||'')}"></td>
+      <td><input class="editable" data-field="descTransporte" value="${escapeHtml(f.descTransporte||'')}"></td>
+      <td><span class="btn-danger" style="cursor:pointer;font-size:12px;font-weight:700" data-act="delEmp">excluir</span></td>
+    </tr>`;
+  }
+  const tbody = el.querySelector('#empTable tbody');
+  tbody.addEventListener('change', async (e)=>{
+    const input = e.target.closest('input[data-field]');
+    if(!input) return;
+    const tr = input.closest('tr');
+    const id = tr.dataset.id;
+    try{
+      await updateDoc(doc(db,'companies',state.activeCompanyId,'employees',id), { [input.dataset.field]: input.value });
+      showToast('Atualizado.');
+    }catch(err){
+      console.error(err);
+      setBanner('danger','⚠️ Não consegui salvar essa edição agora. Tente novamente.');
+    }
+  });
+  tbody.addEventListener('click', async (e)=>{
+    if(e.target.dataset.act!=='delEmp') return;
+    const tr = e.target.closest('tr');
+    const id = tr.dataset.id;
+    if(!confirm('Excluir este funcionário do cadastro?')) return;
+    try{
+      await deleteDoc(doc(db,'companies',state.activeCompanyId,'employees',id));
+    }catch(err){
+      console.error(err);
+      setBanner('danger','⚠️ Não consegui excluir esse funcionário agora. Tente novamente.');
+    }
+  });
+  document.getElementById('addEmpBtn').addEventListener('click', async ()=>{
+    const nome = document.getElementById('fNome').value.trim();
+    if(!nome){ showToast('Digite o nome do funcionário.'); return; }
+    const novo = {
+      nome,
+      cargo: document.getElementById('fCargo').value.trim(),
+      cpf: document.getElementById('fCpf').value.trim(),
+      dpto: document.getElementById('fDpto').value.trim(),
+      codTransporte: document.getElementById('fCod').value.trim() || '803',
+      descTransporte: document.getElementById('fDesc').value.trim() || 'TRANSPORTE'
+    };
+    try{
+      await addDoc(collection(db,'companies',state.activeCompanyId,'employees'), novo);
+      showToast('Funcionário adicionado.');
+    }catch(err){
+      console.error(err);
+      setBanner('danger','⚠️ Não consegui salvar esse funcionário agora. Tente novamente.');
+    }
+  });
+}
+
+/* ===================== CONFIG ===================== */
+function renderConfig(){
+  const el = document.getElementById('tab-config');
+  el.innerHTML = `
+    <div class="card">
+      <h2>Configurações gerais</h2>
+      <p class="sub">Usadas em todos os recibos gerados.</p>
+      <div class="row">
+        <div class="field"><label>Cidade (linha de assinatura)</label><input id="cfgCidade" value="${escapeHtml(state.settings.cidade)}"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Rodapé — canto esquerdo (opcional)</label><input id="cfgRodapeEsq" placeholder="Ex: nome do seu escritório contábil" value="${escapeHtml(state.settings.rodapeEsq)}"></div>
+        <div class="field"><label>Rodapé — canto direito (opcional)</label><input id="cfgRodapeDir" placeholder="Ex: SCI Ambiente Contábil ÚNICO" value="${escapeHtml(state.settings.rodapeDir)}"></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin:8px 0 16px;cursor:pointer">
+        <input type="checkbox" id="cfgCnpj" ${state.settings.mostrarCnpj?'checked':''}> Mostrar CNPJ da empresa no recibo
+      </label>
+      <button class="btn btn-primary" id="saveCfgBtn">Salvar configurações</button>
+    </div>
+    <div class="card">
+      <h2>Sobre os dados</h2>
+      <p class="sub" style="margin-bottom:0">Empresas e funcionários ficam salvos no banco compartilhado (Firebase) e sincronizam em tempo real entre quem estiver usando o link. Não compartilhe esse link com quem não deva acessar os dados dos clientes.</p>
+    </div>
+  `;
+  document.getElementById('saveCfgBtn').addEventListener('click', async ()=>{
+    const novo = {
+      cidade: document.getElementById('cfgCidade').value.trim() || 'São Paulo',
+      rodapeEsq: document.getElementById('cfgRodapeEsq').value.trim(),
+      rodapeDir: document.getElementById('cfgRodapeDir').value.trim(),
+      mostrarCnpj: document.getElementById('cfgCnpj').checked
+    };
+    try{
+      await setDoc(doc(db,'settings','global'), novo, { merge:true });
+      showToast('Configurações salvas.');
+    }catch(err){
+      console.error(err);
+      setBanner('danger','⚠️ Não consegui salvar as configurações agora. Tente novamente.');
+    }
+  });
+}
+
+/* ===================== IMPORTAR & GERAR ===================== */
+function renderImportar(){
+  const el = document.getElementById('tab-importar');
+  if(!state.activeCompanyId){
+    el.innerHTML = `<div class="card"><div class="empty"><div class="big">🏢</div>Selecione uma empresa ativa na aba <b>Empresas</b> antes de importar.</div></div>`;
+    return;
+  }
+  const comp = state.companies.find(c=>c.id===state.activeCompanyId);
+  el.innerHTML = `
+    <div class="card">
+      <h2>1. Importar planilha — ${escapeHtml(comp.nome)}</h2>
+      <p class="sub">Suba o arquivo .xlsx. Se tiver várias abas (uma por empresa), você escolhe qual representa <b>${escapeHtml(comp.nome)}</b>.</p>
+      <div class="dropzone" id="dropzone">
+        <div class="big">📄</div>
+        <p><strong>Clique para escolher</strong> ou arraste o arquivo .xlsx aqui</p>
+      </div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+      <div id="sheetPicker" style="margin-top:14px"></div>
+    </div>
+    <div id="previewBlock"></div>
+  `;
+  const dz = document.getElementById('dropzone');
+  const fi = document.getElementById('fileInput');
+  dz.addEventListener('click', ()=>fi.click());
+  dz.addEventListener('dragover', e=>{e.preventDefault(); dz.classList.add('drag');});
+  dz.addEventListener('dragleave', ()=>dz.classList.remove('drag'));
+  dz.addEventListener('drop', e=>{
+    e.preventDefault(); dz.classList.remove('drag');
+    if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  fi.addEventListener('change', e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); });
+
+  if(state.workbook){ renderSheetPicker(); }
+  if(state.importData){ renderPreview(); }
+}
+
+function handleFile(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const data = new Uint8Array(e.target.result);
+      state.workbook = XLSX.read(data, {type:'array', cellDates:false});
+      state.importData = null;
+      renderSheetPicker();
+    }catch(err){
+      console.error(err);
+      showToast('Não consegui ler esse arquivo. Confirme se é um .xlsx válido.');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderSheetPicker(){
+  const box = document.getElementById('sheetPicker');
+  if(!box) return;
+  const names = state.workbook.SheetNames;
+  box.innerHTML = `
+    <div class="field" style="max-width:360px">
+      <label>Aba correspondente a esta empresa</label>
+      <select id="sheetSelect">${names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}</select>
+    </div>
+    <button class="btn btn-primary" id="chooseColsBtn">Selecionar colunas →</button>
+  `;
+  document.getElementById('chooseColsBtn').addEventListener('click', ()=>{
+    const sheetName = document.getElementById('sheetSelect').value;
+    prepareColumnMapping(sheetName);
+  });
+}
+
+function colLetter(idx){ return XLSX.utils.encode_col(idx); }
+
+function prepareColumnMapping(sheetName){
+  const ws = state.workbook.Sheets[sheetName];
+  const rawRows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+
+  // só para sugerir onde os dados começam — o usuário confirma tudo manualmente
+  let headerRowIdx = -1, nameColGuess = -1;
+  for(let r=0; r<Math.min(8, rawRows.length); r++){
+    const row = rawRows[r] || [];
+    for(let c=0;c<row.length;c++){
+      if(typeof row[c]==='string' && row[c].trim().toLowerCase()==='nome'){
+        headerRowIdx = r; nameColGuess = c; break;
+      }
+    }
+    if(headerRowIdx>=0) break;
+  }
+  if(headerRowIdx<0) headerRowIdx = 2;
+  const headerRow = rawRows[headerRowIdx] || [];
+  const sampleRow = rawRows.slice(headerRowIdx+1).find(r=>r && r.some(v=>v!==null && v!==undefined && String(v).trim()!=='')) || [];
+  const maxCols = Math.max(headerRow.length, sampleRow.length, 12);
+
+  // apenas um chute inicial pros selects — usuário pode trocar livremente
+  const filledCols = [];
+  headerRow.forEach((v,idx)=>{ if(v!==null && v!==undefined && String(v).trim()!=='') filledCols.push(idx); });
+  const last5 = filledCols.slice(-5);
+  const valorGuess = last5.length>=1 ? last5[0] : '';
+  const diasGuess = last5.length>=2 ? last5[1] : '';
+  let mesGuess='', anoGuess='';
+  last5.forEach(i=>{
+    const t = String(headerRow[i]||'');
+    const m = t.match(/(\d{1,2})[\/_](\d{2,4})/);
+    if(m && !mesGuess){ mesGuess=m[1].padStart(2,'0'); anoGuess = m[2].length===2?('20'+m[2]):m[2]; }
+  });
+
+  function optionsHTML(selected){
+    let html = '<option value="">— selecionar —</option>';
+    for(let c=0;c<maxCols;c++){
+      const h = headerRow[c]!=null ? String(headerRow[c]) : '';
+      const sample = sampleRow[c]!=null ? String(sampleRow[c]) : '';
+      const label = `${colLetter(c)} — ${h ? '"'+h+'"' : '(sem título)'}${sample!==''? ' · ex: '+sample : ''}`;
+      html += `<option value="${c}" ${String(c)===String(selected)?'selected':''}>${escapeHtml(label)}</option>`;
+    }
+    return html;
+  }
+
+  const box = document.getElementById('previewBlock');
+  box.innerHTML = `
+    <div class="card">
+      <h2>2. Indicar quais colunas usar — ${escapeHtml(sheetName)}</h2>
+      <p class="sub">Cada empresa pode mandar a planilha num layout diferente. Diga onde está cada informação — o resto da planilha é ignorado.</p>
+      <div class="row">
+        <div class="field"><label>Coluna do nome do funcionário</label><select id="mapNome">${optionsHTML(nameColGuess)}</select></div>
+        <div class="field"><label>Coluna de dias com direito a VT</label><select id="mapDias">${optionsHTML(diasGuess)}</select></div>
+        <div class="field"><label>Coluna do valor do VT por dia (R$)</label><select id="mapValor">${optionsHTML(valorGuess)}</select></div>
+      </div>
+      <p class="sub" style="margin-top:0">O total de cada funcionário será calculado como <b>Dias × Valor por dia</b>.</p>
+      <div class="row">
+        <div class="field" style="max-width:130px"><label>Mês do recibo</label><input id="mapMes" value="${escapeHtml(mesGuess)}" placeholder="07"></div>
+        <div class="field" style="max-width:150px"><label>Ano do recibo</label><input id="mapAno" value="${escapeHtml(anoGuess)}" placeholder="2026"></div>
+      </div>
+      <button class="btn btn-primary" id="confirmMapBtn">Confirmar e pré-visualizar →</button>
+    </div>
+  `;
+  document.getElementById('confirmMapBtn').addEventListener('click', ()=>{
+    const nameSel = document.getElementById('mapNome').value;
+    const diasSel = document.getElementById('mapDias').value;
+    const valorSel = document.getElementById('mapValor').value;
+    const mes = document.getElementById('mapMes').value.trim().padStart(2,'0');
+    const ano = document.getElementById('mapAno').value.trim();
+    if(nameSel===''||diasSel===''||valorSel===''){
+      showToast('Selecione as três colunas: Nome, Dias e Valor por dia.'); return;
+    }
+    if(!mes || mes==='00' || !ano){
+      showToast('Informe o mês e o ano do recibo.'); return;
+    }
+    buildRowsFromMapping(ws, rawRows, headerRowIdx, Number(nameSel), Number(diasSel), Number(valorSel), mes, ano, sheetName);
+  });
+}
+
+function isRowHidden(ws, rowIdx){
+  return !!(ws['!rows'] && ws['!rows'][rowIdx] && ws['!rows'][rowIdx].hidden);
+}
+
+function buildRowsFromMapping(ws, rawRows, headerRowIdx, nameCol, diasCol, valorCol, mes, ano, sheetName){
+  const grouped = new Map(); // normName -> merged entry
+  let hiddenFound = 0;
+  let lastName = null; // pra herdar nome quando a célula do nome está mesclada com a linha de cima
+  for(let r=headerRowIdx+1; r<rawRows.length; r++){
+    const row = rawRows[r] || [];
+    const nomeCell = row[nameCol];
+    const dias = Number(row[diasCol])||0;
+    const valorDia = Number(row[valorCol])||0;
+    let nome;
+    if(nomeCell && typeof nomeCell==='string' && nomeCell.trim()){
+      nome = nomeCell.trim();
+      lastName = nome;
+    } else if(lastName && dias>0 && valorDia>0){
+      // linha sem nome mas com dias/valor válidos: provável célula de nome mesclada com a linha anterior
+      nome = lastName;
+    } else {
+      continue;
+    }
+    if(dias<=0 || valorDia<=0) continue; // sem VT neste mês
+    const hidden = isRowHidden(ws, r);
+    if(hidden) hiddenFound++;
+    const valorMes = Math.round(dias*valorDia*100)/100;
+    const key = normName(nome);
+    if(!grouped.has(key)){
+      grouped.set(key, {
+        nome: nome,
+        cargoSheet: '',
+        lines: [],
+        hidden: false,
+        matchedEmployeeId: null
+      });
+    }
+    const entry = grouped.get(key);
+    entry.lines.push({ dias, valorDia, valorMes });
+    if(hidden) entry.hidden = true;
+  }
+  const dataRows = Array.from(grouped.values()).map(entry=>{
+    const valorMes = Math.round(entry.lines.reduce((s,l)=>s+l.valorMes,0)*100)/100;
+    // campos "dias"/"valorDia" só fazem sentido quando há um único lançamento — usados na tabela resumo
+    const single = entry.lines.length===1;
+    return {
+      nome: entry.nome,
+      cargoSheet: entry.cargoSheet,
+      lines: entry.lines,
+      dias: single ? entry.lines[0].dias : null,
+      valorDia: single ? entry.lines[0].valorDia : null,
+      valorMes,
+      hidden: entry.hidden,
+      matchedEmployeeId: null
+    };
+  });
+  const emps = state.employees[state.activeCompanyId] || [];
+  dataRows.forEach(dr=>{
+    const match = emps.find(f=>normName(f.nome)===normName(dr.nome));
+    if(match) dr.matchedEmployeeId = match.id;
+  });
+  state.importData = { sheetName, mes, ano, rows: dataRows, hiddenFound };
+  renderPreview();
+}
+
+function renderPreview(){
+  const box = document.getElementById('previewBlock');
+  if(!box) return;
+  const d = state.importData;
+  const emps = state.employees[state.activeCompanyId] || [];
+  const unmatched = d.rows.filter(r=>!r.matchedEmployeeId);
+  const matched = d.rows.filter(r=>r.matchedEmployeeId);
+
+  box.innerHTML = `
+    <div class="card">
+      <h2>3. Conferir funcionários encontrados</h2>
+      <div class="row">
+        <div class="field" style="max-width:120px"><label>Mês</label><input id="impMes" value="${escapeHtml(d.mes)}" placeholder="07"></div>
+        <div class="field" style="max-width:140px"><label>Ano</label><input id="impAno" value="${escapeHtml(d.ano)}" placeholder="2026"></div>
+        <div class="field"><label>Funcionários com VT neste mês</label><input value="${d.rows.length} encontrados" disabled></div>
+      </div>
+      <p class="sub" style="margin-top:4px">
+        <span class="pill ${matched.length?'ok':''}">✓ ${matched.length} já cadastrados</span>
+        &nbsp;${unmatched.length ? `<span class="pill warn">⚠ ${unmatched.length} novos — completar abaixo</span>` : ''}
+        ${d.hiddenFound ? `&nbsp;<span class="pill warn">👁 ${d.hiddenFound} vieram de linha(s) oculta(s) na planilha — confira na tabela</span>` : ''}
+      </p>
+      <div style="overflow-x:auto">
+      <table class="tbl" id="foundTable">
+        <thead><tr><th>Nome</th><th>Dias</th><th>Valor/dia</th><th>Total</th><th>Situação</th><th></th></tr></thead>
+        <tbody>
+          ${d.rows.map((r,idx)=>`
+            <tr data-idx="${idx}">
+              <td>${escapeHtml(r.nome)}</td>
+              <td>${r.lines.length===1 ? r.dias : `<span class="pill">${r.lines.length} lançamentos</span>`}</td>
+              <td>${r.lines.length===1 ? 'R$ '+fmtBRL(r.valorDia) : r.lines.map(l=>'R$ '+fmtBRL(l.valorDia)).join(' + ')}</td>
+              <td>R$ ${fmtBRL(r.valorMes)}</td>
+              <td>${r.matchedEmployeeId ? '<span class="pill ok">cadastrado</span>' : '<span class="pill warn">novo</span>'}${r.hidden ? ' <span class="pill" title="Esta linha estava marcada como oculta na planilha">👁 oculta</span>' : ''}</td>
+              <td><span class="btn-danger" style="cursor:pointer;font-size:12px;font-weight:700" data-act="delRow">excluir</span></td>
+            </tr>
+          `).join('') || `<tr><td colspan="6" class="empty">Nenhum funcionário encontrado com esses critérios.</td></tr>`}
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    ${unmatched.length ? `
+    <div class="card">
+      <h2>4. Completar dados dos novos funcionários</h2>
+      <p class="sub">Esses nomes vieram da planilha mas ainda não estão no cadastro. Preencha CPF e cargo — ficará salvo para os próximos meses. Se algum não deveria estar na lista, exclua na tabela acima.</p>
+      <div id="unmatchedList">
+        ${unmatched.map((r,i)=>`
+          <div class="match-row" data-idx="${d.rows.indexOf(r)}">
+            <div class="nome">${escapeHtml(r.nome)}<br><small>${r.lines.length===1 ? `${r.dias} dias · R$ ${fmtBRL(r.valorDia)}/dia` : `${r.lines.length} lançamentos (${r.lines.map(l=>`${l.dias}d × R$${fmtBRL(l.valorDia)}`).join(' + ')})`} · total R$ ${fmtBRL(r.valorMes)}</small></div>
+            <div class="field" style="max-width:160px;margin-bottom:0"><input class="newCargo" placeholder="Cargo" value="${escapeHtml(r.cargoSheet||'')}"></div>
+            <div class="field" style="max-width:160px;margin-bottom:0"><input class="newCpf" placeholder="CPF"></div>
+            <div class="field" style="max-width:90px;margin-bottom:0"><input class="newCod" placeholder="Cód." value="803"></div>
+            <span class="btn-danger" data-act="delRowHere" style="cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap">excluir</span>
+          </div>
+        `).join('')}
+      </div>
+      <button class="btn btn-amber" id="saveNewEmpsBtn" style="margin-top:14px">Salvar novos funcionários no cadastro</button>
+    </div>
+    ` : ''}
+
+    <div class="card">
+      <h2>${unmatched.length? '5':'4'}. Gerar recibos</h2>
+      <div class="row">
+        <div class="field" style="max-width:200px">
+          <label>Vias por funcionário</label>
+          <select id="viasSelect"><option value="2">2 vias (padrão)</option><option value="1">1 via</option></select>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="generateBtn" ${unmatched.length? 'disabled':''}>Gerar recibos de todos os funcionários →</button>
+      ${unmatched.length? '<p class="sub">Salve os novos funcionários acima para liberar a geração.</p>':''}
+    </div>
+  `;
+
+  document.getElementById('foundTable').querySelector('tbody').addEventListener('click', (e)=>{
+    if(e.target.dataset.act!=='delRow') return;
+    const idx = Number(e.target.closest('tr').dataset.idx);
+    const removed = d.rows[idx];
+    if(!confirm(`Remover "${removed.nome}" desta importação? Ele(a) não terá recibo gerado agora.`)) return;
+    d.rows.splice(idx,1);
+    renderPreview();
+  });
+
+  const unmatchedListEl = document.getElementById('unmatchedList');
+  if(unmatchedListEl){
+    unmatchedListEl.addEventListener('click', (e)=>{
+      if(e.target.dataset.act!=='delRowHere') return;
+      const rowEl = e.target.closest('.match-row');
+      const idx = Number(rowEl.dataset.idx);
+      const removed = d.rows[idx];
+      if(!confirm(`Remover "${removed.nome}" desta importação? Ele(a) não terá recibo gerado agora.`)) return;
+      d.rows.splice(idx,1);
+      renderPreview();
+    });
+  }
+
+  document.getElementById('impMes').addEventListener('change', e=>{ d.mes = e.target.value.padStart(2,'0'); });
+  document.getElementById('impAno').addEventListener('change', e=>{ d.ano = e.target.value; });
+
+  const saveBtn = document.getElementById('saveNewEmpsBtn');
+  if(saveBtn){
+    saveBtn.addEventListener('click', async ()=>{
+      saveBtn.disabled = true; saveBtn.textContent = 'Salvando…';
+      const list = document.getElementById('unmatchedList');
+      const rowsEls = [...list.querySelectorAll('.match-row')];
+      try{
+        await Promise.all(rowsEls.map(async (rowEl)=>{
+          const idx = Number(rowEl.dataset.idx);
+          const r = d.rows[idx];
+          const cargo = rowEl.querySelector('.newCargo').value.trim();
+          const cpf = rowEl.querySelector('.newCpf').value.trim();
+          const cod = rowEl.querySelector('.newCod').value.trim() || '803';
+          const novo = { nome: r.nome, cargo, cpf, dpto:'', codTransporte: cod, descTransporte:'TRANSPORTE' };
+          const ref = await addDoc(collection(db,'companies',state.activeCompanyId,'employees'), novo);
+          // guarda os dados na própria linha também, pra não depender do tempo de sincronização do listener
+          Object.assign(r, novo, { matchedEmployeeId: ref.id });
+        }));
+        showToast('Funcionários salvos no cadastro.');
+        renderPreview();
+      }catch(err){
+        console.error(err);
+        setBanner('danger','⚠️ Não consegui salvar um ou mais funcionários agora. Tente novamente.');
+        saveBtn.disabled = false; saveBtn.textContent = 'Salvar novos funcionários no cadastro';
+      }
+    });
+  }
+
+  document.getElementById('generateBtn').addEventListener('click', ()=>{
+    const vias = Number(document.getElementById('viasSelect').value);
+    generateReceipts(vias);
+  });
+}
+
+/* ===================== GERAÇÃO DE RECIBOS ===================== */
+function generateReceipts(vias){
+  const comp = state.companies.find(c=>c.id===state.activeCompanyId);
+  const emps = state.employees[state.activeCompanyId] || [];
+  const d = state.importData;
+  const mesNum = Number(d.mes), anoNum = Number(d.ano);
+  const lastDay = (mesNum && anoNum) ? new Date(anoNum, mesNum, 0).getDate() : 31;
+  const periodoIni = (mesNum&&anoNum) ? `01/${d.mes}/${d.ano}` : '';
+  const periodoFim = (mesNum&&anoNum) ? `${String(lastDay).padStart(2,'0')}/${d.mes}/${d.ano}` : '';
+
+  state.generated = d.rows.map(r=>{
+    const f = emps.find(x=>x.id===r.matchedEmployeeId) || {};
+    return {
+      nome: r.nome,
+      cargo: f.cargo || r.cargo || r.cargoSheet || '',
+      cpf: f.cpf || r.cpf || '',
+      dpto: f.dpto || r.dpto || '',
+      codTransporte: f.codTransporte || r.codTransporte || '803',
+      descTransporte: f.descTransporte || r.descTransporte || 'TRANSPORTE',
+      lines: r.lines,
+      valorMes: r.valorMes,
+      empresaNome: comp.nome,
+      empresaCnpj: comp.cnpj,
+      periodoIni, periodoFim,
+      vias
+    };
+  });
+  renderReceipts();
+  showToast(`${state.generated.length} recibo(s) gerado(s).`);
+  window.scrollTo({top:0, behavior:'smooth'});
+  state.tab = 'recibos-result';
+  renderResultTab();
+}
+
+async function downloadPdf(){
+  const btn = document.getElementById('downloadPdfBtn');
+  const statusEl = document.getElementById('pdfStatus');
+  const area = document.getElementById('receiptsArea');
+  const sheets = area.querySelectorAll('.sheet');
+  if(!sheets.length){ showToast('Nenhum recibo para gerar.'); return; }
+  if(!window.html2canvas || !window.jspdf){
+    showToast('Não consegui carregar o gerador de PDF. Confira sua conexão e tente novamente.');
+    return;
+  }
+  btn.disabled = true;
+  statusEl.style.display = 'block';
+  area.classList.add('pdf-capture'); // renderiza fora da tela pra poder capturar
+  try{
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+    for(let i=0;i<sheets.length;i++){
+      statusEl.textContent = `Gerando PDF… página ${i+1} de ${sheets.length}`;
+      const canvas = await window.html2canvas(sheets[i], { scale:2, backgroundColor:'#ffffff', useCORS:true });
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      const pageWidth = 210, pageHeight = 297;
+      const imgHeight = Math.min(pageHeight, canvas.height * pageWidth / canvas.width);
+      if(i>0) pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, imgHeight);
+    }
+    const comp = state.companies.find(c=>c.id===state.activeCompanyId);
+    const d = state.importData;
+    const safe = (comp?.nome||'recibos').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
+    const filename = `recibos-vt-${safe}-${d?.mes||''}-${d?.ano||''}.pdf`;
+    pdf.save(filename);
+    showToast('PDF baixado com sucesso.');
+  }catch(err){
+    console.error(err);
+    showToast('Não consegui gerar o PDF agora. Tente novamente.');
+  }finally{
+    area.classList.remove('pdf-capture');
+    btn.disabled = false;
+    statusEl.style.display = 'none';
+  }
+}
+
+function renderResultTab(){
+  // inject a temporary result view above the import tab content
+  const importTabEl = document.getElementById('tab-importar');
+  let resultBox = document.getElementById('resultBox');
+  if(!resultBox){
+    resultBox = document.createElement('div');
+    resultBox.id = 'resultBox';
+    importTabEl.prepend(resultBox);
+  }
+  resultBox.innerHTML = `
+    <div class="card" style="border:1.5px solid var(--stamp)">
+      <h2>✅ ${state.generated.length} recibo(s) prontos</h2>
+      <p class="sub">Confira o preview abaixo. Baixe o PDF pronto — ele já sai formatado corretamente, igual em qualquer computador, sem depender de configuração de impressora.</p>
+      <button class="btn btn-primary" id="downloadPdfBtn">⬇️ Baixar PDF</button>
+      <button class="btn btn-ghost" id="printBtn" style="margin-left:8px">🖨️ Imprimir direto</button>
+      <button class="btn btn-ghost" id="backImportBtn" style="margin-left:8px">← Importar outra planilha</button>
+      <p class="sub" id="pdfStatus" style="margin-top:10px;display:none"></p>
+    </div>
+  `;
+  document.getElementById('printBtn').addEventListener('click', ()=>window.print());
+  document.getElementById('downloadPdfBtn').addEventListener('click', downloadPdf);
+  document.getElementById('backImportBtn').addEventListener('click', ()=>{
+    resultBox.remove();
+    state.workbook = null; state.importData = null; state.generated = [];
+    document.getElementById('receiptsArea').innerHTML = '';
+    renderImportar();
+  });
+}
+
+function receiptHTML(r){
+  const cnpjRow = state.settings.mostrarCnpj && r.empresaCnpj ? `<div class="r-cnpj-row"><b>CNPJ:</b> ${escapeHtml(r.empresaCnpj)}</div>` : '';
+  const filledRows = r.lines.map(l=>`
+    <tr>
+      <td class="c-cod">${escapeHtml(r.codTransporte)}</td>
+      <td class="c-transp">${escapeHtml(r.descTransporte)} R$ ${fmtBRL(l.valorDia)} P/ DIA</td>
+      <td class="c-valor">${fmtBRL(l.valorDia)}</td>
+      <td class="c-qtd">${l.dias} X ${fmtBRL(l.valorDia)}</td>
+      <td class="c-total">${fmtBRL(l.valorMes)}</td>
+    </tr>
+  `).join('');
+  const blankCount = Math.max(1, 5 - r.lines.length);
+  const blankRows = Array.from({length: blankCount}).map(()=>`<tr><td class="c-cod"></td><td class="c-transp"></td><td class="c-valor"></td><td class="c-qtd"></td><td class="c-total"></td></tr>`).join('');
+  return `
+    <div class="receipt-box">
+      <div class="r-title">RECIBO DE VALE TRANSPORTE</div>
+      <table class="r-info">
+        <tr><td class="lbl"><b>Nome:</b> ${escapeHtml(r.nome)}</td><td><b>CPF:</b> ${escapeHtml(r.cpf)}</td></tr>
+        <tr><td class="lbl"><b>Cargo:</b> ${escapeHtml(r.cargo)}</td><td><b>Dpto.:</b> ${escapeHtml(r.dpto)}</td></tr>
+      </table>
+      ${cnpjRow}
+      <table class="r-items">
+        <thead><tr>
+          <th>Cód.</th><th>Transporte</th><th>Valor Unit.</th><th>Quantidade x Valor dos passes do mês</th><th>Total</th>
+        </tr></thead>
+        <tbody>
+          ${filledRows}
+          ${blankRows}
+        </tbody>
+      </table>
+      <div class="r-total"><span>Total do valor fornecido</span><span class="dots"></span><span>: ${fmtBRL(r.valorMes)}</span></div>
+      <div class="r-decl">
+        <p>Recebi de ${escapeHtml(r.empresaNome)} a quantidade de Vale-Transportes acima discriminada para minha utilização no decorrer do período de ${r.periodoIni} a ${r.periodoFim}.</p>
+        <div class="r-dateline">${escapeHtml(state.settings.cidade)}, ____ de ____________________ de ________</div>
+        <div class="r-sign"><div class="ln"></div><div class="nm">${escapeHtml(r.nome)}</div></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderReceipts(){
+  const area = document.getElementById('receiptsArea');
+  const cutline = `<div class="cutline"><div class="dash"></div><span class="lbl">✂ corte aqui — via da empresa / via do funcionário</span><div class="dash"></div></div>`;
+  area.innerHTML = state.generated.map(r=>{
+    const copies = r.vias===2 ? receiptHTML(r) + cutline + receiptHTML(r) : receiptHTML(r);
+    const left = state.settings.rodapeEsq || '';
+    const right = state.settings.rodapeDir || '';
+    const footer = (left || right) ? `<div class="page-footer"><span>${escapeHtml(left)}</span><span>${escapeHtml(right)}</span></div>` : '';
+    return `<div class="sheet"><div class="receipts-pair">${copies}</div>${footer}</div>`;
+  }).join('');
+}
+
+// Inicia o app agora que toda a inicialização (state, listeners, funções) já foi declarada.
+startApp();
+</script>
+</body>
+</html>
